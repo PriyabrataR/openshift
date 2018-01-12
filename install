@@ -27,4 +27,45 @@ __EOF__
 systemctl daemon-reload
 systemctl enable docker 
 systemctl restart docker
+#inside openshift folder
+./openshift start --public-master=https://public-ip.xip.io:8443
+# Then let it run and you open up a new terminal to the server
+cat > /etc/profile.d/openshift.sh << '__EOF__'
+export OPENSHIFT=/root/openshift
+export OPENSHIFT_VERSION=v3.6.0
+export PATH=$OPENSHIFT:$PATH
+export KUBECONFIG=$OPENSHIFT/openshift.local.config/master/admin.kubeconfig
+export CURL_CA_BUNDLE=$OPENSHIFT/openshift.local.config/master/ca.crt
+__EOF__
+
+chmod 755 /etc/profile.d/openshift.sh
+. /etc/profile.d/openshift.sh
+docker pull openshift/origin-pod:$OPENSHIFT_VERSION
+docker pull openshift/origin-sti-builder:$OPENSHIFT_VERSION
+docker pull openshift/origin-docker-builder:$OPENSHIFT_VERSION
+docker pull openshift/origin-deployer:$OPENSHIFT_VERSION
+docker pull openshift/origin-docker-registry:$OPENSHIFT_VERSION
+docker pull openshift/origin-haproxy-router:$OPENSHIFT_VERSION
+
+./openshift start --write-config=openshift.local.config
+chmod +r $OPENSHIFT/openshift.local.config/master/admin.kubeconfig
+
+sed -i 's/router.default.svc.cluster.local/public-ip.xip.io/' $OPENSHIFT/openshift.local.config/master/master-config.yaml
+
+#firewall-cmd --permanent --zone=public --add-port=80/tcp
+#firewall-cmd --permanent --zone=public --add-port=443/tcp
+#firewall-cmd --permanent --zone=public --add-port=8443/tcp
+#firewall-cmd --reload
+
+oc login -u system:admin -n default
+oadm policy add-cluster-role-to-user cluster-admin admin
+mkdir /opt/openshift-registry
+chcon -Rt svirt_sandbox_file_t /opt/openshift-registry
+chown 1001.root /opt/openshift-registry
+oadm policy add-scc-to-user privileged -z registry 
+oadm registry --service-account=registry --mount-host=/opt/openshift-registry
+oc get svc docker-registry
+oadm policy add-scc-to-user hostnetwork -z router
+oadm router router --replicas=1 --service-account=router
+oc status
 
