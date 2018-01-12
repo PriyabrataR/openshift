@@ -3,3 +3,19 @@ wget https://github.com/openshift/origin/releases/download/v3.6.0/openshift-orig
 tar -xvzf openshift-origin-server-v3.6.0-c4dd4cf-linux-64bit.tar.gz
 mv openshift-origin-server-v3.6.0-c4dd4cf-linux-64bit openshift
 cd openshift
+setenforce 0
+systemctl stop firewalld
+systemctl disable firewalld
+yum -y install ntp
+systemctl start ntpd
+systemctl enable ntpd
+mkdir -p /etc/systemd/system/docker.service.d 
+cat > /etc/systemd/system/docker.service.d/override.conf << '__EOF__'
+[Service] 
+ExecStart= 
+ExecStart=/usr/bin/dockerd --storage-driver=overlay --insecure-registry 172.30.0.0/16 --exec-opt native.cgroupdriver=systemd 
+__EOF__
+systemctl daemon-reload
+systemctl enable docker 
+systemctl restart docker
+
