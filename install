@@ -1,4 +1,4 @@
-yum -y install wget
+yum -y install wget git
 wget https://github.com/openshift/origin/releases/download/v3.6.0/openshift-origin-server-v3.6.0-c4dd4cf-linux-64bit.tar.gz
 tar -xvzf openshift-origin-server-v3.6.0-c4dd4cf-linux-64bit.tar.gz
 mv openshift-origin-server-v3.6.0-c4dd4cf-linux-64bit openshift
